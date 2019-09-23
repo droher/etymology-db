@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable, Iterable
+from typing import Callable, Generator
 
 from mwparserfromhell.nodes.template import Template
 
@@ -34,7 +34,7 @@ class RelType(Enum):
     Cognate = "cognate_of"
 
 
-def get_template_parser(template_name: str) -> Callable[[str, str, Template], Etymology]:
+def get_template_parser(template_name: str) -> Callable[[str, str, Template], Generator[Etymology]]:
     parse_dict = {
         "inherited": inherited,
         "inh": inherited,
@@ -145,8 +145,8 @@ def orthographic_borrowing(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 3:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.OrthographicBorrowing.value,
@@ -163,8 +163,8 @@ def inherited(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 3:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Inherited.value,
@@ -180,18 +180,15 @@ def pie_root(word: str, lang: str, template: Template):
     Params: (lang, PIE root 1, PIE root n...)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
     for i, root in enumerate(p[1:]):
-        etys.append(
-            Etymology(
-                word=word,
-                lang=lang,
-                reltype=RelType.PieRoot.value,
-                related_lang="ine-pro",
-                related_term=str(root),
-                position=i
-            ))
-    return etys
+        yield Etymology(
+            word=word,
+            lang=lang,
+            reltype=RelType.PieRoot.value,
+            related_lang="ine-pro",
+            related_term=str(root),
+            position=i
+        )
 
 
 def affix(word: str, lang: str, template: Template):
@@ -201,18 +198,15 @@ def affix(word: str, lang: str, template: Template):
     Params: (lang, word part 1, word part n....)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
     for i, root in enumerate(p[1:]):
-        etys.append(
-            Etymology(
+        yield Etymology(
                 word=word,
                 lang=lang,
                 reltype=RelType.Affix.value,
                 related_lang=p[0],
                 related_term=str(root),
                 position=i
-            ))
-    return etys
+            )
 
 
 def prefix(word: str, lang: str, template: Template):
@@ -222,7 +216,7 @@ def prefix(word: str, lang: str, template: Template):
     Params: (lang, prefix, root)
     """
     p = [param for param in template.params if not param.showkey]
-    pre = Etymology(
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Prefix.value,
@@ -230,16 +224,13 @@ def prefix(word: str, lang: str, template: Template):
         related_term=str(p[1])
     )
     if len(p) > 2 and str(p[2]):
-        root = Etymology(
+        yield Etymology(
             word=word,
             lang=lang,
             reltype=RelType.PrefixRoot.value,
             related_lang=str(p[0]),
             related_term=str(p[2])
         )
-        return [pre, root]
-    else:
-        return pre
 
 
 def confix(word: str, lang: str, template: Template):
@@ -250,38 +241,33 @@ def confix(word: str, lang: str, template: Template):
     Params: (lang, prefix, confix root 1, confix root n..., suffix)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
-    etys.append(
-        Etymology(
+    yield Etymology(
             word=word,
             lang=lang,
             reltype=RelType.Confix.value,
             related_lang=str(p[0]),
             related_term=str(p[1]),
             position=0
-        ))
+        )
 
     for i, root in enumerate(p[2:-1]):
-        etys.append(
-            Etymology(
+        yield Etymology(
                 word=word,
                 lang=lang,
                 reltype=RelType.ConfixRoot.value,
                 related_lang=str(p[0]),
                 related_term=str(root),
                 position=i+1
-            ))
+            )
 
-    etys.append(
-        Etymology(
+    yield Etymology(
             word=word,
             lang=lang,
             reltype=RelType.Confix.value,
             related_lang=str(p[0]),
             related_term=str(p[-1]),
             position=len(p)-2
-        ))
-    return etys
+        )
 
 
 def suffix(word: str, lang: str, template: Template):
@@ -290,22 +276,21 @@ def suffix(word: str, lang: str, template: Template):
 
     Params: (lang, root, suffix)
     """
-    p = template.params
-    suf = Etymology(
+    p = [param for param in template.params if not param.showkey]
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Suffix.value,
         related_lang=str(p[0]),
         related_term=str(p[2])
     )
-    root = Etymology(
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.SuffixRoot.value,
         related_lang=str(p[0]),
         related_term=str(p[1])
     )
-    return [root, suf]
 
 
 def compound(word: str, lang: str, template: Template):
@@ -316,18 +301,15 @@ def compound(word: str, lang: str, template: Template):
     Params: (source lang, word part 1, word part n...)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
     for i, root in enumerate(p[1:]):
-        etys.append(
-            Etymology(
+        yield Etymology(
                 word=word,
                 lang=lang,
                 reltype=RelType.Compound.value,
                 related_lang=p[0],
                 related_term=str(root),
                 position=i
-            ))
-    return etys
+            )
 
 
 def blend(word: str, lang: str, template: Template):
@@ -338,18 +320,15 @@ def blend(word: str, lang: str, template: Template):
     Params: (lang, word part 1, word part n...)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
     for i, root in enumerate(p[1:]):
-        etys.append(
-            Etymology(
+        yield Etymology(
                 word=word,
                 lang=lang,
                 reltype=RelType.Blend.value,
                 related_lang=p[0],
                 related_term=str(root),
                 position=i
-            ))
-    return etys
+            )
 
 
 def clipping(word: str, lang: str, template: Template):
@@ -360,8 +339,8 @@ def clipping(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Clipping.value,
@@ -381,8 +360,8 @@ def back_form(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.BackForm.value,
@@ -399,18 +378,15 @@ def doublet(word: str, lang: str, template: Template):
     Params: (lang, word part 1, word part n...)
     """
     p = [param for param in template.params if not param.showkey]
-    etys = []
     for i, doub in enumerate(p[1:]):
-        etys.append(
-            Etymology(
+        yield Etymology(
                 word=word,
                 lang=lang,
                 reltype=RelType.Doublet.value,
                 related_lang=p[0],
                 related_term=str(doub),
                 position=i
-            ))
-    return etys
+            )
 
 
 def onomatopoeic(word: str, lang: str, template: Template):
@@ -420,7 +396,7 @@ def onomatopoeic(word: str, lang: str, template: Template):
     Params: (lang)
     """
     p = [param for param in template.params if not param.showkey]
-    return Etymology(
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Onomatopoeia.value,
@@ -438,8 +414,8 @@ def calque(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 3:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Calque.value,
@@ -457,8 +433,8 @@ def semantic_loan(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 3:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.SemanticLoan.value,
@@ -475,8 +451,8 @@ def named_after(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.NamedAfter.value,
@@ -497,8 +473,8 @@ def phono_semantic_matching(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 3:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.PhonoSemanticMatching.value,
@@ -515,8 +491,8 @@ def mention(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Mention.value,
@@ -535,8 +511,8 @@ def cognate(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Cognate.value,
@@ -554,8 +530,8 @@ def non_cognate(word: str, lang: str, template: Template):
     """
     p = [param for param in template.params if not param.showkey]
     if len(p) < 2:
-        return []
-    return Etymology(
+        pass
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Mention.value,
@@ -572,7 +548,7 @@ def derived_parsed(word: str, lang: str, template: Template):
     Params: (lang, source lang, source word)
     """
     p = [param for param in template.params if not param.showkey]
-    return Etymology(
+    yield Etymology(
         word=word,
         lang=lang,
         reltype=RelType.Derived.value,
@@ -594,7 +570,7 @@ def unnest_template(word: str, lang: str, template: Template, reltype: RelType):
         related_lang=None,
         related_term=None
     )
-    etys = [parent_ety]
+    yield parent_ety
     for p in template.params:
         for child_template in p.value.filter_templates(recursive=False):
             parser = get_template_parser(str(child_template.name))
@@ -605,15 +581,14 @@ def unnest_template(word: str, lang: str, template: Template, reltype: RelType):
                     if child_ety.parent_id:
                         # This means the template was at least doubly nested and a parent has already been assigned
                         # further up the stack
-                        etys.append(child_ety)
+                        yield child_ety
                     else:
                         parented_ety = Etymology.with_parent(child=child_ety, parent=parent_ety, position=parent_index)
-                        etys.append(parented_ety)
+                        yield parented_ety
                 parent_index += 1
-    return etys
 
 
-def affix_parsed(word: str, lang: str, template: Template):
+def affix_parsed(word: str, lang: str, template: Template) -> Generator[Etymology]:
     """
     Same as affix, but a custom solution that parses plain text to find strings of "+" - separated terms.
 
@@ -641,4 +616,3 @@ def related_parsed(word: str, lang: str, template: Template):
     Params: (Template 1, template n...)
     """
     return unnest_template(word=word, lang=lang, template=template, reltype=RelType.Mention)
-
