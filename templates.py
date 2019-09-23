@@ -600,7 +600,7 @@ def unnest_template(word: str, lang: str, template: Template, reltype: RelType):
             parser = get_template_parser(str(child_template.name))
             if parser:
                 child_etys = parser(word, lang, child_template)
-                child_etys = [child_etys] if not isinstance(child_etys, Iterable) else child_etys
+                child_etys = [child_etys] if isinstance(child_etys, Etymology) else child_etys
                 for child_ety in child_etys:
                     if child_ety.parent_id:
                         # This means the template was at least doubly nested and a parent has already been assigned

@@ -1,4 +1,5 @@
 import bz2
+import gzip
 import csv
 import logging
 import re
@@ -15,6 +16,7 @@ from mwparserfromhell.nodes.text import Text
 from mwparserfromhell.nodes.wikilink import Wikilink
 from mwparserfromhell.wikicode import Wikicode
 
+from elements import Etymology
 from templates import get_template_parser
 
 NAMESPACE = "{http://www.mediawiki.org/xml/export-0.10/}"
@@ -27,8 +29,6 @@ DOWNLOAD_PATH = Path("/tmp").joinpath(WIKI_FILENAME)
 OUTPUT_DIR = Path.cwd()
 ETYMOLOGY_PATH = OUTPUT_DIR.joinpath("etymology.csv")
 IPA_PATH = OUTPUT_DIR.joinpath("pronunciation.csv")
-ETY_HEADER = ["id", "lang", "word", "reltype", "related_lang", "related_term", "position",
-              "parent_id", "parent_position"]
 
 
 def tag(s: str):
@@ -51,14 +51,15 @@ def download(url: str) -> None:
 
 
 def stream_xml() -> Element:
-    with bz2.open(DOWNLOAD_PATH, "rb") as f_in, open(ETYMOLOGY_PATH, "w") as f_out:
+    with bz2.open(DOWNLOAD_PATH, "rb") as f_in, gzip.open(ETYMOLOGY_PATH, "wt") as f_out:
         writer = csv.writer(f_out)
+        writer.writerow(Etymology.header())
         for event, elem in etree.iterparse(f_in, huge_tree=True):
             if elem.tag == tag("text"):
                 page = elem.getparent().getparent()
                 ns = page.find(tag("ns"))
                 if ns is not None and ns.text == "0":
-                    x = list(parse_element(elem))
+                    writer.writerows(parse_element(elem))
                 page.clear()
 
 
@@ -66,6 +67,7 @@ def parse_element(elem: Element):
     word = elem.getparent().getparent().find(tag("title")).text
     wikitext = mwp.parse(elem.text)
     for language_section in wikitext.get_sections(levels=[2]):
+        lang = str(language_section.nodes[0].title)
         etymologies = language_section.get_sections(matches="Etymology", flat=True)
         for e in etymologies:
             clean_wikicode(e)
@@ -73,8 +75,10 @@ def parse_element(elem: Element):
                 name = str(n.name)
                 parsed = get_template_parser(name)
                 if parsed:
-                    x = parsed(word, "en", n)
-                    yield x
+                    parsed_etys = parsed(word, lang, n)
+                    parsed_etys = [parsed_etys] if isinstance(parsed_etys, Etymology) else parsed_etys
+                    print(parsed_etys)
+                    yield parsed_etys
 
 
 def clean_wikicode(wc: Wikicode):
