@@ -2,6 +2,8 @@ import bz2
 import csv
 import logging
 import re
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, List
 
@@ -27,6 +29,8 @@ DOWNLOAD_PATH = Path("/tmp").joinpath(WIKI_FILENAME)
 OUTPUT_DIR = Path.cwd()
 ETYMOLOGY_PATH = OUTPUT_DIR.joinpath("etymology.csv")
 IPA_PATH = OUTPUT_DIR.joinpath("pronunciation.csv")
+ETY_HEADER = ["id", "lang", "word", "reltype", "related_lang", "related_term", "position",
+              "parent_id", "parent_position"]
 
 
 def tag(s: str):
@@ -51,36 +55,47 @@ def download(url: str) -> None:
 def stream_xml() -> Element:
     with bz2.open(DOWNLOAD_PATH, "rb") as f_in, open(ETYMOLOGY_PATH, "w") as f_out:
         words = 0
-        etys = 0
+        templates = 0
+        found_templates = defaultdict(int)
+        missed_templates = defaultdict(int)
+
         writer = csv.writer(f_out)
         for event, elem in etree.iterparse(f_in, huge_tree=True):
             if elem.tag == tag("text"):
                 page = elem.getparent().getparent()
                 ns = page.find(tag("ns"))
                 if ns is not None and ns.text == "0":
-                    etys += parse_element(elem)
                     words += 1
-                    print(words, etys)
+                    for template_type, found in parse_element(elem):
+                        templates += 1
+                        if found:
+                            found_templates[template_type] += 1
+                        else:
+                            missed_templates[template_type] += 1
+                    if words % 1000 == 0:
+                        print(sorted(found_templates.items(), key=lambda x: x[1], reverse=True))
+                        print(sorted(missed_templates.items(), key=lambda x: x[1], reverse=True))
                 page.clear()
 
 
 def parse_element(elem: Element):
-    i = 0
     word = elem.getparent().getparent().find(tag("title")).text
-    print(word)
     wikitext = mwp.parse(elem.text)
     for language_section in wikitext.get_sections(levels=[2]):
         etymologies = language_section.get_sections(matches="Etymology", flat=True)
         for e in etymologies:
             clean_wikicode(e)
-            i += sum([1 for n in e.ifilter_templates() if get_template_parser(str(n.name))])
-    return i
+            for n in e.ifilter_templates():
+                name = str(n.name)
+                parsed = get_template_parser(name)
+                if parsed:
+                    yield parsed
 
 
 def clean_wikicode(wc: Wikicode):
     """
     Performs operations on each etymology section that get rid of extraneous nodes
-    and create new templates based on natural-lanugage parsing.
+    and create new templates based on natural-language parsing.
     """
     cleaner = lambda x: ((not isinstance(x, (Text, Wikilink, Template))) or
                          (isinstance(x, Text) and not bool(x.value.strip())))
@@ -199,7 +214,7 @@ def get_plus_combos(wc: Wikicode) -> None:
 
 def get_from_chains(wc: Wikicode) -> None:
     """
-    Given a chunk of wikicode, finds templates separated by either "from" or ">", indicating an ordered chain
+    Given a chunk of wikicode, finds templates separated by either "from" or "<", indicating an ordered chain
     of inheritance. It combines these templates into a single nested `from-parsed` template.
     """
     is_inheritance_str = lambda x: str(x).strip() == "<" or re.sub("[^a-z]+", "", str(x).lower()) == "from"

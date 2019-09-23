@@ -1,14 +1,16 @@
-from typing import List, Dict
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True)
 class Etymology:
     id: int
+    lang: str
     word: str
-    language: str
-    relation_type: str
-    related_word: str = None
-    related_language: str = None
-    related_id: int = None
+    reltype: str
+    related_lang: str
+    related_term: str
+    position: int = None
+    parent_id: int = None
+    parent_reltype: str = None
+    parent_position: str = None
 
