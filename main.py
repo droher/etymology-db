@@ -2,8 +2,6 @@ import bz2
 import csv
 import logging
 import re
-from collections import defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, List
 
@@ -54,27 +52,13 @@ def download(url: str) -> None:
 
 def stream_xml() -> Element:
     with bz2.open(DOWNLOAD_PATH, "rb") as f_in, open(ETYMOLOGY_PATH, "w") as f_out:
-        words = 0
-        templates = 0
-        found_templates = defaultdict(int)
-        missed_templates = defaultdict(int)
-
         writer = csv.writer(f_out)
         for event, elem in etree.iterparse(f_in, huge_tree=True):
             if elem.tag == tag("text"):
                 page = elem.getparent().getparent()
                 ns = page.find(tag("ns"))
                 if ns is not None and ns.text == "0":
-                    words += 1
-                    for template_type, found in parse_element(elem):
-                        templates += 1
-                        if found:
-                            found_templates[template_type] += 1
-                        else:
-                            missed_templates[template_type] += 1
-                    if words % 1000 == 0:
-                        print(sorted(found_templates.items(), key=lambda x: x[1], reverse=True))
-                        print(sorted(missed_templates.items(), key=lambda x: x[1], reverse=True))
+                    x = list(parse_element(elem))
                 page.clear()
 
 
@@ -85,11 +69,12 @@ def parse_element(elem: Element):
         etymologies = language_section.get_sections(matches="Etymology", flat=True)
         for e in etymologies:
             clean_wikicode(e)
-            for n in e.ifilter_templates():
+            for n in e.ifilter_templates(recursive=False):
                 name = str(n.name)
                 parsed = get_template_parser(name)
                 if parsed:
-                    yield parsed
+                    x = parsed(word, "en", n)
+                    yield x
 
 
 def clean_wikicode(wc: Wikicode):
@@ -110,6 +95,10 @@ def clean_wikicode(wc: Wikicode):
 
 def combine_template_chains(wc: Wikicode, new_template_name: str,
                             template_indices: List[int], text_indices: List[int]) -> None:
+    """
+    Helper function for combining templates that are linked via free text into
+    a structured template hierarchy.
+    """
     index_combos = []
 
     index_combo = []
@@ -130,7 +119,7 @@ def combine_template_chains(wc: Wikicode, new_template_name: str,
     combo_nodes = [[wc.nodes[i] for i in chain] for chain in index_combos]
 
     for combo in combo_nodes:
-        params = [Parameter(str(i), t) for i, t in enumerate(combo)]
+        params = [Parameter(str(i+1), t, showkey=False) for i, t in enumerate(combo)]
         new_template = Template(new_template_name, params=params)
         wc.insert_before(combo[0], new_template, recursive=False)
         for node in combo:
@@ -176,7 +165,8 @@ def merge_etyl_templates(wc: Wikicode) -> Wikicode:
                     nodes_to_remove.append(node)
 
         if make_new_template:
-            params = [Parameter(str(i), str(param)) for i, param in enumerate([language, related_language, val])]
+            params = [Parameter(str(i+1), str(param), showkey=False)
+                      for i, param in enumerate([language, related_language, val])]
             new_template = Template("derived-parsed", params=params)
             wc.replace(etyl, new_template, recursive=False)
         else:
