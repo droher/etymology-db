@@ -1,10 +1,12 @@
 # etymology-db
-(Download the data here)
+(Download the data here) (Last generated 9/24/2019)
 
-A structured, comprehensive, and multilingual etymology database created by parsing Wiktionary's etymology sections. Key features:
-*  2.1 million etymological relationships from x words in x languages/dialects
-*  28 different types of etymological relations, distinguishing between inheritance, borrowing, etc.
+A structured, comprehensive, and multilingual etymology dataset created by parsing Wiktionary's etymology sections. Key features:
+*  2.8 million etymological relationships between 1.62 million terms in 2500 languages/dialects
+*  27 different types of etymological relations, distinguishing between inheritance, borrowing, etc.
 *  Hierarchical data that preserves relationship structures, such as the evolution of a term across languages
+
+Caveat for people interested in using this for research: all information is pulled directly from Wiktionary via semi-structured text parsing, and I've made no effort yet to validate any particular result. That said, I would love for this to be useful, so please [contact me](mailto:david@boxball.io) if you have questions.
 
 Here is a description of the table schema:
 
