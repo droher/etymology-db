@@ -56,3 +56,5 @@ And here is a description of each relation type. Note that these are all derived
 | group_affix_root | A node that groups together rows that, when combined, form an affix.  |
 | group_related_root | A node that groups together rows in which `related_terms` are not just related to the `term`, but to each other as well.. |
 | group_derived_root | A node that groups together rows that, when combined, form an unbroken chain of inheritance (in reverse chronological order). |
+
+All data is licensed under the Creative Commons ShareAlike 3.0 License. All code is licensed under the Apache 2.0 license. 
