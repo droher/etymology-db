@@ -4,7 +4,7 @@ import csv
 import logging
 import re
 from pathlib import Path
-from typing import Generator, List, Dict
+from typing import Generator, List
 
 import mwparserfromhell as mwp
 import requests

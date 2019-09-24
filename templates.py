@@ -11,7 +11,7 @@ class RelType(Enum):
     Derived = "derived_from"
     Borrowed = "borrowed_from"
     LearnedBorrowing = "learned_borrowing_from"
-    OrthographicBorrowing = "orthogrpahic_borrowing_from"
+    OrthographicBorrowing = "orthographic_borrowing_from"
     PieRoot = "has_pie_root"
     Affix = "has_affix"
     Prefix = "has_prefix"
@@ -19,7 +19,6 @@ class RelType(Enum):
     Suffix = "has_suffix"
     SuffixRoot = "has_prefix_with_root"
     Confix = "has_confix"
-    ConfixRoot = "has_confix_with_root"
     Compound = "compound_of"
     Blend = "blend_of"
     Clipping = "clipping_of"
@@ -269,7 +268,7 @@ def confix(term: str, lang: str, template: Template):
             Etymology(
                 term=term,
                 lang=lang,
-                reltype=RelType.ConfixRoot.value,
+                reltype=RelType.Confix.value,
                 related_lang=str(p[0]),
                 related_term=str(root),
                 position=i+1
