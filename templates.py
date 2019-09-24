@@ -595,7 +595,7 @@ def unnest_template(term: str, lang: str, template: Template, reltype: RelType):
         reltype=reltype.value,
         related_lang=None,
         related_term=None,
-        root_tag=Etymology.generate_root_tag()
+        group_tag=Etymology.generate_root_tag()
     )
     etys = [parent_ety]
     for p in template.params:

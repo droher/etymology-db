@@ -58,7 +58,7 @@ def stream_xml() -> Element:
                 page = elem.getparent().getparent()
                 ns = page.find(tag("ns"))
                 if ns is not None and ns.text == "0":
-                    writer.writerows(parse_element(elem))
+                    writer.writerows(e.to_row() for e in parse_element(elem))
                 page.clear()
 
 
