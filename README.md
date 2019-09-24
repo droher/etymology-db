@@ -1,5 +1,5 @@
 # etymology-db
-(Download the data here) (Last generated 9/24/2019)
+([Download the data here](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=qCf9mq)) (Last generated 9/24/2019)
 
 A structured, comprehensive, and multilingual etymology dataset created by parsing Wiktionary's etymology sections. Key features:
 *  2.8 million etymological relationships between 1.62 million terms in 2500 languages/dialects
