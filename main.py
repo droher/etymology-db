@@ -59,11 +59,11 @@ def stream_xml() -> Element:
                 page = elem.getparent().getparent()
                 ns = page.find(tag("ns"))
                 if ns is not None and ns.text == "0":
-                    writer.writerow(el.to_row() for el in parse_element(elem))
+                    writer.writerows(parse_element(elem))
                 page.clear()
 
 
-def parse_element(elem: Element) -> Generator[Etymology]:
+def parse_element(elem: Element):
     word = elem.getparent().getparent().find(tag("title")).text
     wikitext = mwp.parse(elem.text)
     for language_section in wikitext.get_sections(levels=[2]):
@@ -75,7 +75,10 @@ def parse_element(elem: Element) -> Generator[Etymology]:
                 name = str(n.name)
                 parsed = get_template_parser(name)
                 if parsed:
-                    return parsed(word, lang, n)
+                    parsed_etys = parsed(word, lang, n)
+                    parsed_etys = [parsed_etys] if isinstance(parsed_etys, Etymology) else parsed_etys
+                    print(parsed_etys)
+                    yield parsed_etys
 
 
 def clean_wikicode(wc: Wikicode):
