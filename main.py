@@ -4,7 +4,7 @@ import csv
 import logging
 import re
 from pathlib import Path
-from typing import Generator, List
+from typing import Generator, List, Dict
 
 import mwparserfromhell as mwp
 import requests
@@ -27,8 +27,7 @@ WIKTIONARY_URL = "https://dumps.wikimedia.your.org/enwiktionary/latest/{}".forma
 
 DOWNLOAD_PATH = Path("/tmp").joinpath(WIKI_FILENAME)
 OUTPUT_DIR = Path.cwd()
-ETYMOLOGY_PATH = OUTPUT_DIR.joinpath("etymology.csv")
-IPA_PATH = OUTPUT_DIR.joinpath("pronunciation.csv")
+ETYMOLOGY_PATH = OUTPUT_DIR.joinpath("etymology.csv.gz")
 
 
 def tag(s: str):
@@ -64,7 +63,7 @@ def stream_xml() -> Element:
 
 
 def parse_element(elem: Element):
-    word = elem.getparent().getparent().find(tag("title")).text
+    term = elem.getparent().getparent().find(tag("title")).text
     wikitext = mwp.parse(elem.text)
     for language_section in wikitext.get_sections(levels=[2]):
         lang = str(language_section.nodes[0].title)
@@ -73,12 +72,11 @@ def parse_element(elem: Element):
             clean_wikicode(e)
             for n in e.ifilter_templates(recursive=False):
                 name = str(n.name)
-                parsed = get_template_parser(name)
-                if parsed:
-                    parsed_etys = parsed(word, lang, n)
-                    parsed_etys = [parsed_etys] if isinstance(parsed_etys, Etymology) else parsed_etys
-                    print(parsed_etys)
-                    yield parsed_etys
+                parsed = get_template_parser(name)(term, lang, n)
+                parsed_etys = [parsed] if isinstance(parsed, Etymology) else parsed
+                filtered_etys = [e for e in parsed_etys if e.is_valid()]
+                for ety in filtered_etys:
+                    yield ety
 
 
 def clean_wikicode(wc: Wikicode):
@@ -95,6 +93,7 @@ def clean_wikicode(wc: Wikicode):
     get_plus_combos(wc)
     get_comma_combos(wc)
     get_from_chains(wc)
+    remove_links(wc)
 
 
 def combine_template_chains(wc: Wikicode, new_template_name: str,
@@ -219,6 +218,14 @@ def get_from_chains(wc: Wikicode) -> None:
 
     combine_template_chains(wc, new_template_name="from-parsed", template_indices=template_indices,
                             text_indices=text_indices)
+
+
+def remove_links(wc: Wikicode) -> None:
+    """
+    Given a chunk of wikicode, replaces all inner links with their text representation
+    """
+    for link in wc.filter_wikilinks():
+        wc.replace(link, link.text)
 
 
 def inherited(t: Template) -> Generator[List[str], None, None]:
