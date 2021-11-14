@@ -1,18 +1,24 @@
+import logging
+from multiprocessing import Manager
 from enum import Enum
-from typing import Callable
+from typing import Callable, List
 
 from mwparserfromhell.nodes.template import Template
 
 from elements import Etymology
 
 
+unparsed_templates = Manager().dict()
+
 class RelType(Enum):
     Inherited = "inherited_from"
     Derived = "derived_from"
     Borrowed = "borrowed_from"
     LearnedBorrowing = "learned_borrowing_from"
+    SemiLearnedBorrowing = "semi_learned_borrowing_from"
     OrthographicBorrowing = "orthographic_borrowing_from"
-    PieRoot = "has_pie_root"
+    UnadaptedBorrowing = "unadapted_borrowing_from"
+    Root = "has_root"
     Affix = "has_affix"
     Prefix = "has_prefix"
     PrefixRoot = "has_prefix_with_root"
@@ -21,6 +27,8 @@ class RelType(Enum):
     Confix = "has_confix"
     Compound = "compound_of"
     Blend = "blend_of"
+    Abbreviation = "abbreviation_of"
+    Initialism = "initialism_of"
     Clipping = "clipping_of"
     BackForm = "back-formation_from"
     Doublet = "doublet_with"
@@ -36,7 +44,24 @@ class RelType(Enum):
     GroupDerived = "group_derived_root"
 
 
+def parse_template(template_name: str, term: str, lang: str, template: Template) -> List[Etymology]:
+    parser_func = get_template_parser(template_name.strip())
+    if not parser_func:
+        counter = unparsed_templates.get(template_name, 0)
+        unparsed_templates[template_name] = counter + 1
+        logging.debug(f"Unrecognized template name `{template_name}` (term: {term}, lang: {lang})")
+        return []
+    try:
+        result = parser_func(term, lang, template)
+    except Exception:
+        logging.warning(f"Error while parsing:\nTerm: {term}\nLanguage: {lang}\n"
+                      f"Wikicode: {template}\n", exc_info=True)
+        return []
+    return [result] if isinstance(result, Etymology) else result
+
+
 def get_template_parser(template_name: str) -> Callable[[str, str, Template], Etymology]:
+    default_func = lambda x, y, z: []
     parse_dict = {
         "inherited": inherited,
         "inh": inherited,
@@ -44,23 +69,36 @@ def get_template_parser(template_name: str) -> Callable[[str, str, Template], Et
         "der": derived,
         "borrowed": borrowed,
         "bor": borrowed,
-        "learned borrowring": learned_borrowing,
+        "learned borrowing": learned_borrowing,
+        "learned_borrowing": learned_borrowing,
+        "lbor": learned_borrowing,
         "orthographic borrowing": orthographic_borrowing,
         "obor": orthographic_borrowing,
+        "slbor": semi_learned_borrowing,
+        "unadapted borrowing": unadapted_borrowing,
+        "ubor": unadapted_borrowing,
         "PIE root": pie_root,
+        "root": root,
         "affix": affix,
         "af": affix,
         "prefix": prefix,
+        "pre": prefix,
         "confix": confix,
         "suffix": suffix,
+        "suf": suffix,
         "compound": compound,
+        "com": compound,
         "blend": blend,
         "clipping": clipping,
+        "clipping of": clipping,
         "back_form": back_form,
+        "back-form": back_form,
+        "back-formation": back_form,
         "doublet": doublet,
         "onomatopoeic": onomatopoeic,
         "onom": onomatopoeic,
         "calque": calque,
+        "cal": calque,
         "semantic loan": semantic_loan,
         "named-after": named_after,
         "phono-semantifc matching": phono_semantic_matching,
@@ -71,6 +109,7 @@ def get_template_parser(template_name: str) -> Callable[[str, str, Template], Et
         "cog": cognate,
         "noncognate": non_cognate,
         "noncog": non_cognate,
+        "ncog": non_cognate,
         "langname-mention": mention,
         "m+": mention,
         "link": mention,
@@ -78,9 +117,46 @@ def get_template_parser(template_name: str) -> Callable[[str, str, Template], Et
         "derived-parsed": derived_parsed,
         "affix-parsed": affix_parsed,
         "from-parsed": from_parsed,
-        "related-parsed": related_parsed
+        "related-parsed": related_parsed,
+        "abbreviation of": abbreviation,
+        "initialism of": initialism,
+        # Templates not related to etymology
+        # Wikipedia link
+        "w": default_func,
+        "wikipedia": default_func,
+        # Derived category, shortens chains that exist elsewhere
+        "dercat": default_func,
+        # Unrelated metadata
+        "rel-top": default_func,
+        "rel-bottom": default_func,
+        "small": default_func,
+        "section link": default_func,
+        "CE": default_func,
+        "C.E.": default_func,
+        "B.C.E.": default_func,
+        "gloss": default_func,
+        "glossary": default_func,
+        # Unknown/low-information
+        "unk": default_func,
+        "unknown": default_func,
+        "etystub": default_func,
+        "nonlemma": default_func,
+        "rfe": default_func,
+        "IPAchar": default_func,
+        "ja-l": default_func,
+        "ja-r": default_func,
+        "ja-kanjitab": default_func,
+        # Qualifiers/extras to ignore for now
+        "sense": default_func,
+        "senseid": default_func,
+        "senseid-close": default_func,
+        "defdate": default_func,
+        "qualifier": default_func,
+        "nb...": default_func,
+        "rfv-etym": default_func,
+        "inflection of": default_func
     }
-    return parse_dict.get(template_name, lambda x, y, z: [])
+    return parse_dict.get(template_name)
 
 
 def derived(term: str, lang: str, template: Template):
@@ -138,6 +214,44 @@ def learned_borrowing(term: str, lang: str, template: Template):
     )
 
 
+def semi_learned_borrowing(term: str, lang: str, template: Template):
+    """
+    This template is intended specifically for semi-learned borrowings,
+    which are borrowings that have been partly reshaped by later sound change or analogy with inherited terms
+
+    Params: (lang, source lang, source word)
+    """
+    p = [param for param in template.params if not param.showkey]
+    if len(p) < 3:
+        return []
+    return Etymology(
+        term=term,
+        lang=lang,
+        reltype=RelType.SemiLearnedBorrowing.value,
+        related_lang=str(p[1]),
+        related_term=str(p[2])
+    )
+
+
+def unadapted_borrowing(term: str, lang: str, template: Template):
+    """
+    This template is intended for loanwords that have not been conformed to the morpho-syntactic,
+    phonological and/or phonotactical rules of the target language.
+
+    Params: (lang, source lang, source word)
+    """
+    p = [param for param in template.params if not param.showkey]
+    if len(p) < 3:
+        return []
+    return Etymology(
+        term=term,
+        lang=lang,
+        reltype=RelType.UnadaptedBorrowing.value,
+        related_lang=str(p[1]),
+        related_term=str(p[2])
+    )
+
+
 def orthographic_borrowing(term: str, lang: str, template: Template):
     """
     This template is intended specifically for loans from language A into language B, which are loaned only in its
@@ -175,6 +289,27 @@ def inherited(term: str, lang: str, template: Template):
     )
 
 
+def root(term: str, lang: str, template: Template):
+    """
+    Root language derivation, a generalization of the deprecated pie root
+
+    Params: (lang, PIE root 1, PIE root n...)
+    """
+    p = [param for param in template.params if not param.showkey]
+    etys = []
+    for i, root in enumerate(p[2:]):
+        etys.append(
+            Etymology(
+                term=term,
+                lang=lang,
+                reltype=RelType.Root.value,
+                related_lang=str(p[1]),
+                related_term=str(root),
+                position=i
+            ))
+    return etys
+
+
 def pie_root(term: str, lang: str, template: Template):
     """
     This template adds entries to a subcategory of Category:Terms derived from Proto-Indo-European roots.
@@ -188,7 +323,7 @@ def pie_root(term: str, lang: str, template: Template):
             Etymology(
                 term=term,
                 lang=lang,
-                reltype=RelType.PieRoot.value,
+                reltype=RelType.Root.value,
                 related_lang="ine-pro",
                 related_term=str(root),
                 position=i
@@ -292,7 +427,9 @@ def suffix(term: str, lang: str, template: Template):
 
     Params: (lang, root, suffix)
     """
-    p = template.params
+    p = [param for param in template.params if not param.showkey]
+    if len(str(p)) < 3:
+        return []
     suf = Etymology(
         term=term,
         lang=lang,
@@ -367,6 +504,43 @@ def clipping(term: str, lang: str, template: Template):
         term=term,
         lang=lang,
         reltype=RelType.Clipping.value,
+        related_lang=str(p[0]),
+        related_term=str(p[1])
+    )
+
+
+def abbreviation(term: str, lang: str, template: Template):
+    """
+    Abbreviations of another word. Differs from clipping in that
+    abbreviations are based on written shortenings instead of spoken ones.
+
+    Params: (lang, source word)
+    """
+    p = [param for param in template.params if not param.showkey]
+    if len(p) < 2:
+        return []
+    return Etymology(
+        term=term,
+        lang=lang,
+        reltype=RelType.Abbreviation.value,
+        related_lang=str(p[0]),
+        related_term=str(p[1])
+    )
+
+
+def initialism(term: str, lang: str, template: Template):
+    """
+    Initialisms of another word/phrase
+
+    Params: (lang, source word)
+    """
+    p = [param for param in template.params if not param.showkey]
+    if len(p) < 2:
+        return []
+    return Etymology(
+        term=term,
+        lang=lang,
+        reltype=RelType.Initialism.value,
         related_lang=str(p[0]),
         related_term=str(p[1])
     )
@@ -600,19 +774,16 @@ def unnest_template(term: str, lang: str, template: Template, reltype: RelType):
     etys = [parent_ety]
     for p in template.params:
         for child_template in p.value.filter_templates(recursive=False):
-            parser = get_template_parser(str(child_template.name))
-            if parser:
-                child_etys = parser(term, lang, child_template)
-                child_etys = [child_etys] if isinstance(child_etys, Etymology) else child_etys
-                for child_ety in child_etys:
-                    if child_ety.parent_tag:
-                        # This means the template was at least doubly nested and a parent has already been assigned
-                        # further up the stack
-                        etys.append(child_ety)
-                    else:
-                        parented_ety = Etymology.with_parent(child=child_ety, parent=parent_ety, position=parent_index)
-                        etys.append(parented_ety)
-                parent_index += 1
+            child_etys = parse_template(str(child_template.name), term, lang, child_template)
+            for child_ety in child_etys:
+                if child_ety.parent_tag:
+                    # This means the template was at least doubly nested and a parent has already been assigned
+                    # further up the stack
+                    etys.append(child_ety)
+                else:
+                    parented_ety = Etymology.with_parent(child=child_ety, parent=parent_ety, position=parent_index)
+                    etys.append(parented_ety)
+            parent_index += 1
     return etys
 
 

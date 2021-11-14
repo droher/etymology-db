@@ -1,14 +1,16 @@
 # etymology-db
-([Download the data here](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=qCf9mq)) (Last generated 2020-11-24)
+**Downloads:** (Last generated 2021-11-14)  
+[**Gzipped CSV**](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=wnJe4r)  
+[**Parquet**](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=qCf9mq)
 
 A structured, comprehensive, and multilingual etymology dataset created by parsing Wiktionary's etymology sections. Key features:
-*  3+ million etymological relationships between 1.6+ million terms in 2500+ languages/dialects
-*  27 different types of etymological relations, distinguishing between inheritance, borrowing, etc.
+*  3.8+ million etymological relationships between 1.8+ million terms in 2900+ languages/dialects
+*  31 different types of etymological relations, distinguishing between inheritance, borrowing, etc.
 *  Hierarchical data that preserves relationship structures, such as the evolution of a term across languages
 
 Caveat for people interested in using this for research: all information is pulled directly from Wiktionary via
 semi-structured text parsing, and I've made no effort yet to validate any particular result. That said, I would love
-for this to be useful, so please contact me if you have questions.
+for this to be useful, so please raise an issue if you have questions.
 
 Here is a description of the table schema:
 
@@ -35,8 +37,10 @@ And here is a description of each relation type. Note that these are all derived
 | borrowed_from | Indicates that `term` is a loanword borrowed during the time the borrowing language was spoken. |
 | derived_from | A catch-all for a derivation relationship that is not specifically inherited/borrowed. |
 | learned_borrowing_from | Borrowed from the original language via atypical ("inorganic") means of language contact. |
-| orthographic_borrowing_from | Borrows the spelling of `related_term` but not the pronunciaton. |
-| pie_root | Constructed root(s) of `term` in Proto-Indo-European.  |
+| semi_learned_borrowing_from | Borrowed words that have been partly reshaped by later sound change or analogy with inherited terms. /
+| orthographic_borrowing_from | Borrows the spelling of `related_term` but not the pronunciation. |
+| unadapted_borrowing_from | Borrowed words that have not been conformed to the morpho-syntactic, phonological and/or phonotactical rules of the target language. |
+| root | Constructed root(s) of `term` in  a theoretical ancestor language, e.g. Proto-Indo-European.  |
 | has_prefix | Indicates that `term` is partially based on the prefix `related_term`. |
 | has_prefix_with_root | `related_term` is the term attached to a prefix (not necessarily a suffix, e.g. "normal" in "abnormal") |
 | has_suffix | Same as above, but for suffixes. |
@@ -53,10 +57,16 @@ And here is a description of each relation type. Note that these are all derived
 | phono-semantic_matching_of | Indicates that `term` and `related_term` have very similar sounds and meanings in both languages. |
 | etymologically_related_to | A catch-all indicating `term` and `related_term` are etymologically related without any further context provided. |
 | blend_of | Indicates that `term` is made up of a blend of `related_term` and the related terms in other `position`s. This differs from a compound in that the beginning of one word is combined with the ending of another. |
-| clipping_of | Indicates that `term` is a shortened version of `related_term` without any semantic difference. |
+| clipping_of | Indicates that `term` is a  _spoken_ shortened version of `related_term` without any semantic difference. |
+| abbreviation_of | Indicates that `term` is a _written_ shortened version of `related_term` without any semantic difference. |
+| initialism_of | Indicates that `term` is based on the initials of  `related_term`. |
 | cognate_of | Indicates that `term` and `related_term` sound/mean similar things, but no direct ancestral relationship exists. |
 | group_affix_root | A node that groups together rows that, when combined, form an affix.  |
-| group_related_root | A node that groups together rows in which `related_terms` are not just related to the `term`, but to each other as well.. |
+| group_related_root | A node that groups together rows in which `related_terms` are not just related to the `term`, but to each other as well. |
 | group_derived_root | A node that groups together rows that, when combined, form an unbroken chain of inheritance (in reverse chronological order). |
+
+The `wiktionary_codes.csv` file is manually combined from these two pages:  
+https://en.wiktionary.org/wiki/Wiktionary:List_of_languages  
+https://en.wiktionary.org/wiki/Module:etymology_languages/data
 
 All data is licensed under the Creative Commons ShareAlike 3.0 License. All code is licensed under the Apache 2.0 license. 
