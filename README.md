@@ -1,7 +1,7 @@
 # etymology-db
 **Downloads:** (Last generated 2021-11-14)  
 [**Gzipped CSV**](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=wnJe4r)  
-[**Parquet**](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=qCf9mq)
+[**Parquet**](https://1drv.ms/u/s!AtpEocFNRNBWhhP6w5D9XfdtPH9I?e=jWRwnI)
 
 A structured, comprehensive, and multilingual etymology dataset created by parsing Wiktionary's etymology sections. Key features:
 *  3.8+ million etymological relationships between 1.8+ million terms in 2900+ languages/dialects
