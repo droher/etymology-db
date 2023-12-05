@@ -1,10 +1,10 @@
 # etymology-db
-**Downloads:** (Last generated 2021-11-14)  
+**Downloads:** (Last generated 2023-12-05)  
 [**Gzipped CSV**](https://1drv.ms/u/s!AtpEocFNRNBWhAe7co0JFvac-OfA?e=wnJe4r)  
 [**Parquet**](https://1drv.ms/u/s!AtpEocFNRNBWhhP6w5D9XfdtPH9I?e=jWRwnI)
 
 A structured, comprehensive, and multilingual etymology dataset created by parsing Wiktionary's etymology sections. Key features:
-*  3.8+ million etymological relationships between 1.8+ million terms in 2900+ languages/dialects
+*  4.2+ million etymological relationships between 2.0+ million terms in 3300+ languages/dialects
 *  31 different types of etymological relations, distinguishing between inheritance, borrowing, etc.
 *  Hierarchical data that preserves relationship structures, such as the evolution of a term across languages
 

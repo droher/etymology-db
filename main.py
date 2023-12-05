@@ -3,7 +3,7 @@ import gzip
 import csv
 import logging
 import re
-from multiprocessing import Pool
+from multiprocessing import Pool, freeze_support
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Generator, List, Tuple
@@ -64,8 +64,9 @@ def write_all():
             elapsed = (datetime.now() - time)
             if elapsed.total_seconds() > 1:
                 elapsed -= timedelta(microseconds=elapsed.microseconds)
-            print(f"Entries parsed: {entries_parsed} Time elapsed: {elapsed} "
-                  f"Entries per second: {entries_parsed // elapsed.total_seconds()}{' ' * 10}", end="\r", flush=True)
+            if entries_parsed % 1000 == 0:
+                print(f"Entries parsed: {entries_parsed} Time elapsed: {elapsed} "
+                      f"Entries per second: {entries_parsed // elapsed.total_seconds()}{' ' * 10}", end="\r", flush=True)
 
 
 def stream_terms() -> Generator[Tuple[str, str], None, None]:

@@ -102,3 +102,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+etymology.csv
+etymology.csv.gz
+etymology.parquet

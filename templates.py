@@ -8,7 +8,7 @@ from mwparserfromhell.nodes.template import Template
 from elements import Etymology
 
 
-unparsed_templates = Manager().dict()
+unparsed_templates = dict()
 
 class RelType(Enum):
     Inherited = "inherited_from"
